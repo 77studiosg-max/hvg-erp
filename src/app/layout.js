@@ -13,22 +13,27 @@ export const metadata = {
 };
 
 export default async function RootLayout({ children }) {
-  const allCategories = await prisma.productCategory.findMany({
-    orderBy: { name: 'asc' }
-  });
-  
-  // Transform flat list into hierarchy for Sidebar
-  const categories = allCategories
-    .filter(c => !c.parentId)
-    .map(parent => ({
-      ...parent,
-      subcategories: allCategories
-        .filter(c => c.parentId === parent.id)
-        .map(child => ({
-          ...child,
-          subcategories: allCategories.filter(c => c.parentId === child.id)
-        }))
-    }));
+  let categories = [];
+  try {
+    const allCategories = await prisma.productCategory.findMany({
+      orderBy: { name: 'asc' }
+    });
+    
+    // Transform flat list into hierarchy for Sidebar
+    categories = allCategories
+      .filter(c => !c.parentId)
+      .map(parent => ({
+        ...parent,
+        subcategories: allCategories
+          .filter(c => c.parentId === parent.id)
+          .map(child => ({
+            ...child,
+            subcategories: allCategories.filter(c => c.parentId === child.id)
+          }))
+      }));
+  } catch (error) {
+    console.error("Failed to fetch categories for sidebar:", error);
+  }
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
