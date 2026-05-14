@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { prisma } from '@/lib/prisma';
 import { Settings } from 'lucide-react';
 import { createCategory, deleteCategory, updateCategory, toggleCategoryBOM } from '@/app/actions/settings';
