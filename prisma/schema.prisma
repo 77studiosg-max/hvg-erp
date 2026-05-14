@@ -1,0 +1,264 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Customer {
+  id               String       @id @default(uuid())
+  companyName      String?
+  contactName      String?
+  email            String?
+  phone            String?
+  addressLine1     String?
+  addressLine2     String?
+  city             String?
+  postcode         String?
+  country          String       @default("United Kingdom")
+  vatNumber        String?
+  companyRegNumber String?
+  paymentTerms     String?      @default("Net 30")
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  customerNumber   String?      @unique
+  invoices         Invoice[]
+  quotes           Quote[]
+  salesOrders      SalesOrder[]
+}
+
+model Vendor {
+  id               String          @id @default(uuid())
+  companyName      String?
+  contactName      String?
+  email            String?
+  phone            String?
+  addressLine1     String?
+  addressLine2     String?
+  city             String?
+  postcode         String?
+  country          String          @default("United Kingdom")
+  vatNumber        String?
+  companyRegNumber String?
+  paymentTerms     String?         @default("Net 30")
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  vendorNumber     String?         @unique
+  purchaseOrders   PurchaseOrder[]
+}
+
+model ProductCategory {
+  id            String            @id @default(uuid())
+  name          String
+  description   String?
+  unit          String?
+  parentId      String?
+  bomEnabled    Boolean           @default(false)
+  products      Product[]
+  parent        ProductCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  subcategories ProductCategory[] @relation("CategoryHierarchy")
+}
+
+model Product {
+  id            String              @id @default(uuid())
+  sku           String              @unique
+  name          String
+  description   String?
+  price         Float
+  stockLevel    Float               @default(0)
+  categoryId    String?
+  isBOM         Boolean             @default(false)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  unit          String?             @default("pcs")
+  wll           String?
+  mblUnit       String?
+  mblValue      Float?
+  usedInBOM     BOMItem[]           @relation("ComponentProduct")
+  bomItems      BOMItem[]           @relation("ParentProduct")
+  category      ProductCategory?    @relation(fields: [categoryId], references: [id])
+  purchaseItems PurchaseOrderItem[]
+  quoteItems        QuoteItem[]
+  salesItems        SalesOrderItem[]
+  deliveryNoteItems DeliveryNoteItem[]
+  invoiceItems      InvoiceItem[]
+  quoteBomItems     QuoteItemBOM[]
+  salesBomItems     SalesOrderItemBOM[]
+}
+
+model BOMItem {
+  id          String  @id @default(uuid())
+  parentId    String
+  componentId String
+  quantity    Float
+  component   Product @relation("ComponentProduct", fields: [componentId], references: [id])
+  parent      Product @relation("ParentProduct", fields: [parentId], references: [id])
+}
+
+model Quote {
+  id          String      @id @default(uuid())
+  quoteNumber String?     @unique
+  customerId  String
+  status      String      @default("Draft")
+  totalAmount Float       @default(0)
+  vatRate     Float       @default(20)
+  discount    Float       @default(0)
+  validUntil  DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  pdfUrl      String?
+  customer    Customer    @relation(fields: [customerId], references: [id])
+  items       QuoteItem[]
+}
+
+model QuoteItem {
+  id        String  @id @default(uuid())
+  quoteId   String
+  productId String
+  customDescription String?
+  quantity  Float
+  unitPrice Float
+  margin    Float   @default(0)
+  quote     Quote   @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id])
+  bomItems  QuoteItemBOM[]
+}
+
+model SalesOrder {
+  id          String           @id @default(uuid())
+  orderNumber String?          @unique
+  customerId  String
+  status      String           @default("Pending")
+  totalAmount Float            @default(0)
+  vatRate     Float            @default(20)
+  discount    Float            @default(0)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  pdfUrl      String?
+  customer      Customer         @relation(fields: [customerId], references: [id])
+  items         SalesOrderItem[]
+  deliveryNotes DeliveryNote[]
+  invoices      Invoice[]
+}
+
+model SalesOrderItem {
+  id                String     @id @default(uuid())
+  salesOrderId      String
+  productId         String
+  customDescription String?
+  quantity          Float
+  deliveredQuantity Float      @default(0)
+  invoicedQuantity  Float      @default(0)
+  unitPrice         Float
+  product           Product    @relation(fields: [productId], references: [id])
+  salesOrder        SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  bomItems          SalesOrderItemBOM[]
+}
+
+model PurchaseOrder {
+  id          String              @id @default(uuid())
+  poNumber    String              @unique
+  vendorId    String
+  status      String              @default("Pending")
+  totalAmount Float               @default(0)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  pdfUrl      String?
+  vendor      Vendor              @relation(fields: [vendorId], references: [id])
+  items       PurchaseOrderItem[]
+}
+
+model PurchaseOrderItem {
+  id              String        @id @default(uuid())
+  purchaseOrderId String
+  productId       String
+  quantity        Float
+  receivedQuantity Float        @default(0)
+  unitPrice       Float
+  product         Product       @relation(fields: [productId], references: [id])
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+}
+
+model Invoice {
+  id            String    @id @default(uuid())
+  invoiceNumber String?   @unique
+  customerId    String
+  salesOrderId  String?
+  status        String    @default("Unpaid")
+  totalAmount   Float     @default(0)
+  vatRate       Float     @default(20)
+  discount      Float     @default(0)
+  dueDate       DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  pdfUrl        String?
+  customer      Customer  @relation(fields: [customerId], references: [id])
+  salesOrder    SalesOrder? @relation(fields: [salesOrderId], references: [id])
+  payments      Payment[]
+  items         InvoiceItem[]
+}
+
+model InvoiceItem {
+  id                String  @id @default(uuid())
+  invoiceId         String
+  productId         String
+  customDescription String?
+  quantity          Float
+  unitPrice         Float
+  invoice           Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  product           Product @relation(fields: [productId], references: [id])
+}
+
+model Payment {
+  id        String   @id @default(uuid())
+  invoiceId String
+  amount    Float
+  date      DateTime @default(now())
+  method    String?
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+model DeliveryNote {
+  id           String             @id @default(uuid())
+  noteNumber   String             @unique
+  salesOrderId String
+  date         DateTime           @default(now())
+  pdfUrl       String?
+  salesOrder   SalesOrder         @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  items        DeliveryNoteItem[]
+}
+
+model DeliveryNoteItem {
+  id                String       @id @default(uuid())
+  deliveryNoteId    String
+  productId         String
+  customDescription String?
+  quantity          Float
+  deliveryNote      DeliveryNote @relation(fields: [deliveryNoteId], references: [id], onDelete: Cascade)
+  product           Product      @relation(fields: [productId], references: [id])
+}
+
+model QuoteItemBOM {
+  id          String  @id @default(uuid())
+  quoteItemId String
+  productId   String
+  quantity    Float
+  unitPrice   Float
+  margin      Float   @default(0)
+  quoteItem   QuoteItem @relation(fields: [quoteItemId], references: [id], onDelete: Cascade)
+  product     Product   @relation(fields: [productId], references: [id])
+}
+
+model SalesOrderItemBOM {
+  id               String  @id @default(uuid())
+  salesOrderItemId String
+  productId        String
+  quantity         Float
+  unitPrice        Float
+  margin           Float   @default(0)
+  salesOrderItem   SalesOrderItem @relation(fields: [salesOrderItemId], references: [id], onDelete: Cascade)
+  product          Product        @relation(fields: [productId], references: [id])
+}
