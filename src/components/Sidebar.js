@@ -26,6 +26,16 @@ function SidebarInner({ categories = [] }) {
   const { theme, toggleTheme } = useTheme();
   const [inventoryOpen, setInventoryOpen] = useState(false);
   const [openCategories, setOpenCategories] = useState({});
+  const navItems = [
+    { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+    { name: 'Customers', href: '/customers', icon: Users },
+    { name: 'Vendors', href: '/vendors', icon: Users },
+    { name: 'Inventory', href: '/inventory', icon: Package, hasDropdown: true },
+    { name: 'Quotes', href: '/quotes', icon: FileText },
+    { name: 'Sales Orders', href: '/sales-orders', icon: ShoppingCart },
+    { name: 'Delivery Notes', href: '/delivery-notes', icon: Truck },
+    { name: 'Invoices', href: '/invoices', icon: Receipt },
+  ];
 
   useEffect(() => {
     if (pathname.startsWith('/inventory')) {
